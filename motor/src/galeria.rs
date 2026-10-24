@@ -52,6 +52,9 @@ pub struct Item {
 
 const EXTENSOES: [&str; 4] = ["png", "jpg", "jpeg", "webp"];
 
+/// Subpasta do output com as cópias 1920×1080 para o Avid.
+pub const PASTA_AVID: &str = "Para o Avid";
+
 /// Lista as imagens da pasta output (e das subpastas, um nível), as mais novas primeiro.
 pub fn listar(output: &Path, limite: usize) -> Vec<Item> {
     let mut arquivos: Vec<(f64, PathBuf)> = Vec::new();
@@ -64,7 +67,10 @@ pub fn listar(output: &Path, limite: usize) -> Vec<Item> {
             }
             let Ok(m) = e.metadata() else { continue };
             if m.is_dir() {
-                subpastas.push(p);
+                // as cópias 1920×1080 para o Avid não entram (seriam imagens repetidas)
+                if nome != PASTA_AVID {
+                    subpastas.push(p);
+                }
             } else if p.extension().and_then(|x| x.to_str()).is_some_and(|x| EXTENSOES.contains(&x.to_lowercase().as_str())) {
                 let t = m.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_secs_f64()).unwrap_or(0.0);
                 arquivos.push((t, p));
@@ -148,6 +154,8 @@ mod testes {
         std::thread::sleep(std::time::Duration::from_millis(20));
         std::fs::write(dir.join("Flux2-Klein_00001_.png"), png_falso(1024, 1024, &[("prompt", comfy)])).unwrap();
         std::fs::write(dir.join("notas.txt"), "x").unwrap();
+        std::fs::create_dir_all(dir.join(PASTA_AVID)).unwrap();
+        std::fs::write(dir.join(PASTA_AVID).join("REVELA_00001_1920x1080.png"), png_falso(1920, 1080, &[])).unwrap();
 
         let itens = listar(&dir, 10);
         assert_eq!(itens.len(), 2);

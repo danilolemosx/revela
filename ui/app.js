@@ -324,6 +324,7 @@ function renderSelo() {
   else if (a.motor === "ligando") t = `LIGANDO O MOTOR… ${est.ligandoDesde ? relogio((Date.now() - est.ligandoDesde) / 1000) : ""}`;
   else if (a.motor === "erro") t = "MOTOR COM ERRO · TENTAR DE NOVO";
   else if (a.motor === "ausente") t = "COMFYUI NÃO ENCONTRADO";
+  else if (a.motor === "instalar") t = "FALTA PREPARAR ESTE MAC";
   else if (a.motor === "fechado" && a.motorMsg) t = "MOTOR DESLIGADO · LIGAR";
   $("#seloTxt").textContent = t;
   s.title = a.motorMsg || (a.motor === "ligado" ? "ComfyUI em modo offline, só neste Mac" : "");
@@ -791,11 +792,89 @@ function abrirAjustes() {
   $("#modal").classList.remove("oculto");
 }
 
+// ---------- primeira abertura ----------
+
+const inst = { rodando: false, erro: false, total: 0 };
+
+function mostrarInstalacao(a) {
+  const completo = a.falta !== "tradutor";
+  const precisa = completo ? 35 : 4;
+  $("#instTexto").innerHTML = completo
+    ? "Na primeira vez, o Revela baixa o motor de imagem (<b>ComfyUI</b>), os modelos <b>FLUX.2 Klein 4B</b> e o tradutor: <b>uns 28 GB</b>, de 30 minutos a 2 horas conforme a internet. Depois funciona sem internet, e nada do que você faz sai do Mac."
+    : "Achei o <b>ComfyUI Desktop</b> com os modelos FLUX.2 Klein 4B. Falta só o tradutor, que passa o seu pedido para o inglês: <b>2,5 GB</b>.";
+  const pouco = a.livreGb < precisa;
+  const mem = a.memoriaGb < 32 ? `<dd class="ruim">${a.memoriaGb} GB: funciona, mas bem mais lento (o recomendado é 32 GB)</dd>` : `<dd>${a.memoriaGb} GB</dd>`;
+  $("#instInfo").innerHTML =
+    `<dt>Disco livre</dt><dd class="${pouco ? "ruim" : ""}">${a.livreGb} GB${pouco ? ` · precisa de ${precisa} GB` : ` (precisa de ${precisa} GB)`}</dd>` +
+    `<dt>Memória</dt>${mem}` +
+    `<dt>Onde fica</dt><dd title="${esc(a.pastaApp)}">${esc(a.pastaApp)}</dd>` +
+    (completo ? "<dt>Resultados</dt><dd>Imagens/Revela</dd>" : "");
+  $("#instTam").textContent = completo ? "uns 28 GB" : "2,5 GB";
+  $("#btInstalar").disabled = pouco || inst.rodando;
+  $("#instalacao").classList.remove("oculto");
+}
+
+function aoInstalar(linha) {
+  if (linha.startsWith("PASSO ")) {
+    const [n, t, texto] = linha.slice(6).split("|");
+    inst.total = +t;
+    $("#instPasso").textContent = texto;
+    $("#instN").textContent = `passo ${n} de ${t}`;
+    $("#instBarra").style.width = `${(((+n - 1) / +t) * 100).toFixed(1)}%`;
+  } else if (linha.startsWith("PCT ")) {
+    // dentro do passo dos modelos, a barra mostra o download
+    $("#instBarra").style.width = `${Math.min(100, +linha.slice(4))}%`;
+  } else if (linha.startsWith("ERRO ")) {
+    inst.erro = true;
+    falhaInstalacao(linha.slice(5));
+  } else if (linha === "FIM_SEM_SUCESSO") {
+    if (!inst.erro) falhaInstalacao("A instalação parou antes do fim. Veja o registro.");
+  } else if (linha === "PRONTO") {
+    inst.rodando = false;
+    $("#instBarra").style.width = "100%";
+    $("#instMsg").className = "inst-msg ok";
+    $("#instMsg").textContent = "Pronto! Ligando o motor…";
+    $("#btInstalar").innerHTML = "PRONTO";
+  }
+}
+
+function falhaInstalacao(msg) {
+  inst.rodando = false;
+  $("#instMsg").className = "inst-msg erro";
+  $("#instMsg").textContent = msg;
+  const b = $("#btInstalar");
+  b.classList.remove("ocupado");
+  b.disabled = false;
+  b.innerHTML = "TENTAR DE NOVO<small>o que já baixou é aproveitado</small>";
+}
+
+$("#btInstalar").onclick = async () => {
+  if (inst.rodando) return;
+  inst.rodando = true;
+  inst.erro = false;
+  $("#instMsg").textContent = "";
+  $("#instProgresso").classList.remove("oculto");
+  const b = $("#btInstalar");
+  b.classList.add("ocupado");
+  b.innerHTML = "INSTALANDO…<small>deixe o Mac ligado e na internet</small>";
+  try {
+    await invoke("instalar");
+  } catch (e) {
+    falhaInstalacao(String(e));
+  }
+};
+$("#btInstLog").onclick = () => invoke("mostrar", { caminho: `${est.app.pastaApp}/logs/instalacao.log`, revelar: true }).catch((e) => aviso(String(e), true));
+
 // ---------- estado do backend ----------
 
 function aoEstado(novo) {
   const antes = est.app;
   est.app = novo;
+  if (novo.motor === "instalar") mostrarInstalacao(novo);
+  else if (antes.motor === "instalar") {
+    $("#instalacao").classList.add("oculto");
+    aviso("Instalação concluída. O motor está ligando.");
+  }
   if (novo.motor === "ligando" && antes.motor !== "ligando") est.ligandoDesde = Date.now();
   if (novo.motor === "ligado" && antes.motor !== "ligado") {
     est.primeira = true;
@@ -1199,6 +1278,7 @@ async function autoteste() {
 lembrar();
 renderTudo();
 T.event.listen("estado", (e) => aoEstado(e.payload));
+T.event.listen("instalacao", (e) => aoInstalar(String(e.payload)));
 invoke("estado").then(aoEstado).catch((e) => aviso(String(e), true));
 carregarGaleria();
 invoke("autoteste").then((sim) => sim && autoteste()).catch(() => {});

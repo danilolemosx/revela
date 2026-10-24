@@ -38,13 +38,17 @@ def ler_png(p):
     return info
 
 
+# imagens que não entram nas capturas (por exemplo, as de outra pessoa, para as fotos do site)
+EXCLUIR = set(filter(None, os.environ.get('REVELA_SIM_EXCLUIR', '').split(',')))
+
+
 def galeria():
     itens = []
     for raiz, _, arqs in os.walk(OUTPUT):
-        if raiz.count(os.sep) - OUTPUT.count(os.sep) > 1:
+        if raiz.count(os.sep) - OUTPUT.count(os.sep) > 1 or raiz.endswith('Para o Avid'):
             continue
         for a in arqs:
-            if not a.lower().endswith('.png'):
+            if not a.lower().endswith('.png') or a in EXCLUIR:
                 continue
             p = os.path.join(raiz, a)
             i = ler_png(p)
@@ -74,7 +78,7 @@ window.__TAURI__ = (() => {
     dimensoes: (a) => { const g = window.__galeria.find((x) => x.caminho === a.caminho); return g ? [g.largura, g.altura] : [1344, 768]; },
     traduzir: (a) => new Promise((r) => setTimeout(() => r(window.__traducao || 'Place the hedgehog from image 1 on a bar counter at night, with blue and red neon lighting and rain streaming down the window behind.'), 150)),
     gerar: () => new Promise(() => {}),
-    favoritar: () => null, cancelar: () => null, mostrar: () => null, ligar_motor: () => null, autoteste: () => false,
+    favoritar: () => null, cancelar: () => null, mostrar: () => null, ligar_motor: () => null, autoteste: () => false, instalar: () => null,
     para_avid: () => '/x/Para o Avid/REVELA_00003_1920x1080.png',
   };
   return {
@@ -165,3 +169,24 @@ pagina('5-ajustes', ESTADO, "document.querySelector('#engr').click();")
 
 # 6. sem ComfyUI Desktop
 pagina('6-sem-comfy', dict(ESTADO, motor='ausente', tradutor='ausente', motorMsg='não achei o ComfyUI Desktop', saida=''))
+
+# 7. primeira abertura num Mac sem nada: tela de instalação, baixando os modelos
+INST = dict(ESTADO, motor='instalar', tradutor='instalar', falta='completo', livreGb=212, memoriaGb=32,
+            pastaApp='/Users/amigo/Library/Application Support/Revela')
+pagina('7-instalar', INST, """
+document.querySelector('#btInstalar').click();
+%s
+window.__emitir('instalacao', 'PASSO 5|6|Baixando os modelos FLUX.2 Klein 4B e o tradutor (uns 26 GB; pode demorar)');
+window.__emitir('instalacao', 'PCT 37');
+""" % esperar(100))
+
+# 8. só o tradutor, com pouca memória
+pagina('8-instalar-tradutor', dict(INST, falta='tradutor', memoriaGb=16, livreGb=3))
+
+# 9. erro na instalação
+pagina('9-instalar-erro', INST, """
+document.querySelector('#btInstalar').click();
+%s
+window.__emitir('instalacao', 'PASSO 2|6|Baixando o ComfyUI v0.42.5');
+window.__emitir('instalacao', 'ERRO Não consegui baixar o ComfyUI.');
+""" % esperar(100))

@@ -1,0 +1,81 @@
+REVELA 0.1.0 — gerar e editar imagens com IA, 100% no seu Mac
+=============================================================
+
+O QUE É
+Você escreve em português o que quer ver. O app cria a imagem do zero ou edita uma foto (1 ou 2 referências):
+o plano que faltou, um insert, uma tela de celular, um fundo, um quadro de storyboard, uma referência para a arte.
+Roda só no seu Mac, com o motor ComfyUI e os modelos FLUX.2 Klein 4B: sem nuvem, sem conta, sem nada pago,
+e nada do que você faz sai da máquina.
+
+PRECISA DE
+- Mac com chip Apple (M1, M2, M3, M4). Não roda em Mac Intel.
+  Não sabe qual é o seu? Menu Apple () > Sobre Este Mac: "Chip Apple M..." serve.
+- 32 GB de memória. Com 16 GB funciona, mas bem mais devagar: feche o Avid e outros apps pesados.
+- ATENÇÃO AO TAMANHO: na primeira abertura o app baixa uns 28 GB (motor, modelos e tradutor).
+  Precisa de uns 35 GB livres no disco e de internet só nessa primeira vez.
+  Se você já usa o ComfyUI Desktop com os modelos FLUX.2 Klein 4B, ele aproveita e baixa só 2,5 GB.
+
+BAIXAR
+  Revela_0.1.0_aarch64.dmg
+  https://github.com/danilolemosx/revela/releases/download/v0.1.0/Revela_0.1.0_aarch64.dmg
+
+
+==============================
+INSTALAR
+==============================
+Abra o .dmg e arraste o Revela para a pasta Aplicativos.
+O app não é assinado pela Apple, então o Mac reclama na primeira vez. É normal:
+
+> "O Revela não pode ser aberto" / "Apple não pôde verificar…"
+  1. Tente abrir o app uma vez e clique em OK.
+  2. Vá em Ajustes do Sistema > Privacidade e Segurança.
+  3. No fim da página, clique em "Abrir Mesmo Assim" e confirme com a senha.
+
+> "O Revela está danificado e não pode ser aberto"
+  Não está danificado: é o bloqueio do macOS para arquivos baixados.
+  1. Copie o app para Aplicativos.
+  2. Abra o Terminal (Aplicativos > Utilitários > Terminal), cole e aperte Enter:
+       xattr -cr /Applications/Revela.app
+  3. Abra o app de novo.
+
+PRIMEIRA ABERTURA
+  O app mostra "Preparar este Mac". Clique em INSTALAR: ele baixa uns 28 GB (Python, o ComfyUI, os modelos
+  FLUX.2 Klein 4B e o tradutor). Leva de 30 min a 2 h conforme a internet. Se a internet cair ou você fechar,
+  é só abrir de novo e clicar em TENTAR DE NOVO: continua de onde parou.
+  O motor fica em ~/Library/Application Support/Revela e as imagens em Imagens/Revela.
+
+
+==============================
+USAR
+==============================
+  1. Escolha CRIAR DO ZERO ou EDITAR FOTO (arraste 1 ou 2 fotos, ou cole um print com ⌘V).
+  2. Escreva o pedido em português. O tradutor (que roda no Mac) mostra o texto em inglês que vai para a IA:
+     confira; SÓ TRADUZIR é fiel ao pedido, DETALHAR acrescenta luz, lente e textura; ✎ edita à mão.
+  3. Os botões embaixo do pedido (PLANO GERAL, PLONGÉE, LENTE 50mm, PELÍCULA 35mm…) entram como termos de câmera.
+  4. Escolha o tamanho (16:9, 9:16, 1:1, 2.39 ou igual à foto) e a qualidade, e clique em GERAR (⌘ + Enter).
+     + FILA guarda o pedido para gerar depois; dá para enfileirar vários e ir trabalhar.
+  5. A imagem vai aparecendo ao vivo. CANCELAR para na hora.
+
+DEPOIS DE GERAR
+  - REPETIR COM VARIAÇÃO: o mesmo pedido com outro seed.
+  - USAR COMO REFERÊNCIA: o resultado vira a foto 1 de uma nova edição (editar em etapas; as etapas aparecem
+    embaixo da imagem e ⇆ ANTES mostra a foto de origem).
+  - ⤓ carrega o pedido, o tamanho e o seed da imagem (para refazer igual ou mudar só um detalhe).
+    Duplo clique na galeria faz o mesmo.
+  - PARA O AVID: cópia 1920×1080 em PNG (preenchendo ou com tarja) na pasta "Para o Avid".
+  - O pedido, o inglês e o seed ficam gravados dentro do próprio PNG.
+
+TEMPO (Mac Studio de 32 GB)
+  - A primeira imagem depois de abrir o app demora uns 5 minutos: os modelos são lidos do disco.
+  - RÁPIDA: ~1 min para criar, ~2 min para editar uma foto. RASCUNHO RÁPIDO (metade do tamanho) é bem mais rápido.
+  - CAPRICHADA: de 8 a 18 minutos. Use quando a rápida não bastar.
+
+BOM SABER
+  - Se o ComfyUI Desktop estiver aberto, o Revela usa ele. Não deixe os dois carregando modelos ao mesmo tempo:
+    a memória do Mac não aguenta.
+  - Erros: ~/Library/Application Support/Revela (comfyui.log, tradutor.log e logs/instalacao.log).
+    Mande para o Danilo.
+
+LICENÇAS
+  Revela: MIT ou Apache 2.0. Motor: ComfyUI (GPL-3.0). Modelos: FLUX.2 [klein] 4B, da Black Forest Labs
+  (Apache 2.0). Tradutor: Qwen3 4B Instruct (Apache 2.0) no llama.cpp (MIT). Código: github.com/danilolemosx/revela

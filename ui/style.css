@@ -213,3 +213,26 @@ body.criar .pt { height: 150px; }
 
 .aviso { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--creme); color: #34312d; padding: 12px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; max-width: 70%; box-shadow: 0 6px 24px rgba(0,0,0,.5); z-index: 20; }
 .aviso.erro { background: #f3c9c4; }
+
+/* primeira abertura */
+.instalacao { position: fixed; inset: 0; background: rgba(20,20,20,.97); display: grid; place-items: center; z-index: 15; }
+.inst-cartao { width: 640px; background: var(--papel); border-radius: 16px; padding: 26px 28px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.inst-cartao h2 { font-size: 30px; font-weight: 900; font-stretch: 125%; letter-spacing: .03em; color: var(--creme); }
+.inst-cartao p { font-size: 13.5px; line-height: 1.55; font-weight: 600; color: #cfcfcf; }
+.inst-cartao p b { color: var(--creme); }
+.inst-info { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; font-size: 12px; border-top: 1.5px solid var(--linha); border-bottom: 1.5px solid var(--linha); padding: 12px 0; }
+.inst-info dt { font-size: 9.5px; font-weight: 800; color: var(--cinza); font-stretch: 125%; letter-spacing: .08em; text-transform: uppercase; padding-top: 2px; }
+.inst-info dd { font-weight: 600; color: var(--tinta); overflow: hidden; text-overflow: ellipsis; user-select: text; -webkit-user-select: text; }
+.inst-info dd.ruim { color: #ef6a61; }
+.inst-progresso { display: flex; flex-direction: column; gap: 8px; }
+.inst-progresso small { font-size: 11px; color: var(--cinza); font-weight: 600; }
+.inst-passo { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+.inst-passo b { font-weight: 800; color: var(--creme); }
+.inst-passo span { margin-left: auto; font-size: 11px; color: var(--cinza); font-weight: 700; white-space: nowrap; }
+.inst-progresso .trilho { margin-top: 0; background: #444; }
+.inst-msg { font-size: 12.5px; font-weight: 700; line-height: 1.5; min-height: 0; }
+.inst-msg.erro { color: #ef6a61; }
+.inst-msg.ok { color: #8fd9a8; }
+.inst-botoes { display: flex; gap: 10px; align-items: center; }
+.inst-botoes .gerar { flex: 1; }
+.inst-botoes .gerar.ocupado small { opacity: .8; }

@@ -114,6 +114,7 @@ impl Tradutor {
             lugares.push(d.join("llama-server"));
             lugares.push(d.join("../Resources/llama/llama-server"));
         }
+        lugares.push(crate::local::pasta_app().join("llama/llama-server"));
         lugares.push("/opt/homebrew/bin/llama-server".into());
         lugares.push("/usr/local/bin/llama-server".into());
         lugares.into_iter().find(|p| p.is_file())

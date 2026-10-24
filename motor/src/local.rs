@@ -41,18 +41,96 @@ pub struct Config {
     pub seg_passo: BTreeMap<String, f64>,
 }
 
-/// ~/Library/Application Support/Revela
+/// ~/Library/Application Support/Revela (ou REVELA_HOME, para testar o instalador numa pasta separada)
 pub fn pasta_app() -> PathBuf {
-    let p = dirs::data_dir().unwrap_or_else(std::env::temp_dir).join("Revela");
+    let p = std::env::var_os("REVELA_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| dirs::data_dir().unwrap_or_else(std::env::temp_dir).join("Revela"));
     let _ = std::fs::create_dir_all(&p);
     p
+}
+
+/// Onde ficam as imagens de quem usa a instalação própria do Revela: Imagens/Revela.
+pub fn pasta_resultados() -> PathBuf {
+    dirs::picture_dir().unwrap_or_else(|| pasta_app()).join("Revela")
+}
+
+/// O que o instalador deixou pronto (".instalado" = "versão modo").
+pub fn instalado() -> Option<String> {
+    let t = std::fs::read_to_string(pasta_app().join(".instalado")).ok()?;
+    t.split_whitespace().nth(1).map(String::from)
+}
+
+/// Configuração da instalação própria (feita pelo instalador do Revela, modo "completo").
+pub fn instalacao_propria() -> Option<Config> {
+    if instalado().as_deref() != Some("completo") {
+        return None;
+    }
+    let h = pasta_app();
+    let comfy_dir = h.join("ComfyUI");
+    let python = h.join("env/bin/python");
+    if !comfy_dir.join("main.py").is_file() || !python.is_file() {
+        return None;
+    }
+    let saida = pasta_resultados();
+    let _ = std::fs::create_dir_all(&saida);
+    Some(Config {
+        comfy_dir,
+        python,
+        caminhos_modelos: Some(h.join("extra_model_paths.yaml")),
+        modelos_dir: h.join("models"),
+        entrada: h.join("input"),
+        saida,
+        porta_desktop: PORTA_DESKTOP,
+        tradutor_modelo: h.join("models/llm").join(crate::tradutor::MODELO_PADRAO),
+        modelos: Modelos::default(),
+        favoritas: vec![],
+        seg_passo: BTreeMap::new(),
+    })
+}
+
+/// O que falta para o Revela funcionar neste Mac.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Falta {
+    Nada,
+    /// Tem o motor e os modelos (ComfyUI Desktop), falta o tradutor: 2,5 GB.
+    Tradutor,
+    /// Falta tudo: uns 28 GB.
+    Completo,
+}
+
+/// Escolhe a configuração (a salva, a instalação própria ou a do ComfyUI Desktop) e diz o que falta.
+pub fn preparar() -> (Option<Config>, Falta) {
+    let c = carregar().ok().or_else(instalacao_propria);
+    let Some(mut c) = c else { return (None, Falta::Completo) };
+    if !modelos_faltando(&c).is_empty() {
+        // o Desktop não tem os modelos: a instalação própria resolve tudo
+        return match instalacao_propria() {
+            Some(p) if modelos_faltando(&p).is_empty() => {
+                let _ = salvar(&p);
+                (Some(p), Falta::Nada)
+            }
+            _ => (Some(c), Falta::Completo),
+        };
+    }
+    if !c.tradutor_modelo.is_file() {
+        // o tradutor pode ter sido instalado à parte (modo "tradutor")
+        let proprio = pasta_app().join("models/llm").join(crate::tradutor::MODELO_PADRAO);
+        if proprio.is_file() {
+            c.tradutor_modelo = proprio;
+            let _ = salvar(&c);
+        }
+    }
+    let falta = if c.tradutor_modelo.is_file() && crate::tradutor::Tradutor::achar_binario().is_some() { Falta::Nada } else { Falta::Tradutor };
+    (Some(c), falta)
 }
 
 fn arquivo_config() -> PathBuf {
     pasta_app().join("config.json")
 }
 
-/// A configuração salva; na primeira vez, descobre a partir do ComfyUI Desktop.
+/// A configuração salva; na primeira vez, a instalação própria ou a do ComfyUI Desktop.
 pub fn carregar() -> Result<Config> {
     if let Ok(t) = std::fs::read_to_string(arquivo_config()) {
         if let Ok(c) = serde_json::from_str::<Config>(&t) {
@@ -61,7 +139,10 @@ pub fn carregar() -> Result<Config> {
             }
         }
     }
-    let c = descobrir()?;
+    let c = match instalacao_propria() {
+        Some(c) => c,
+        None => descobrir()?,
+    };
     salvar(&c)?;
     Ok(c)
 }

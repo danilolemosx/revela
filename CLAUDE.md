@@ -13,6 +13,13 @@ modelo de app desktop do Danilo (Decanta). O processo completo está em `docs/pr
 - Tradutor: Qwen3 4B Instruct Q4_K_M (`models/llm/`) no `llama-server` (Homebrew por enquanto), porta 8190.
   Regras e glossário em `motor/src/tradutor.rs`.
 - A ficha (pedido, inglês, seed, tamanho) vai gravada dentro do PNG (texto "revela"); a galeria lê de lá.
+- Primeira abertura (amigos, Corte Livre): `local::preparar()` decide o que falta. Com o ComfyUI Desktop e os modelos,
+  falta só o tradutor (modo "tradutor", 2,5 GB); sem nada, modo "completo" (~28 GB). O app mostra "Preparar este Mac"
+  e roda `instalador/instalar.sh` (vai nos recursos do app) em `~/Library/Application Support/Revela` (ou REVELA_HOME):
+  uv, Python 3.13, ComfyUI v0.42.5 (tarball do GitHub), `requisitos.txt` (versões do ComfyUI Desktop, sem Manager,
+  templates e docs), llama.cpp b11669 (sha256 conferido), modelos do Hugging Face em revisões fixas (Apache 2.0) e
+  `extra_model_paths.yaml`. As imagens de quem usa a instalação própria vão para Imagens/Revela.
+  Teste sem os modelos grandes: `REVELA_SEM_MODELOS=1 zsh instalador/instalar.sh instalador <pasta> completo`.
 - Tempos medidos no Mac Studio 32 GB: rápida 1024² ≈ 50 s com os modelos carregados (≈ 5 min na primeira, lendo do HD);
   editar com 1 foto 16:9 ≈ 2 min.
 

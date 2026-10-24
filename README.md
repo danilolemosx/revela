@@ -16,6 +16,8 @@ celular, fundo, storyboard, referência para a direção de arte. Sem nuvem, sem
 - Modelos: **FLUX.2 [klein] 4B** da Black Forest Labs (Apache 2.0), distilled (rápida) e base (caprichada).
 - Tradutor: **Qwen3 4B Instruct** (Apache 2.0) no **llama.cpp** (MIT).
 - Requisitos: Mac com chip Apple (M1 a M4), 32 GB de memória recomendados.
+- **Tamanho:** na primeira abertura o app baixa o motor, os modelos e o tradutor: **uns 28 GB** (precisa de ~35 GB
+  livres). Quem já usa o ComfyUI Desktop com o FLUX.2 Klein 4B baixa só o tradutor (2,5 GB). Veja `docs/LEIA-ME.txt`.
 
 ## Desenvolvimento
 

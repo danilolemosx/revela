@@ -30,6 +30,8 @@ enum Situacao {
     Erro,
     /// Não instalado (sem ComfyUI Desktop ou sem llama-server).
     Ausente,
+    /// Falta instalar (a interface mostra a tela "Preparar este Mac").
+    Instalar,
 }
 
 #[derive(Clone, Serialize, Default)]
@@ -51,6 +53,11 @@ struct EstadoApp {
     /// Segundos por passo por megapixel já medidos neste Mac (chave: "rapida-0", "caprichada-1"...).
     seg_passo: BTreeMap<String, f64>,
     favoritas: Vec<String>,
+    /// O que falta instalar: "nada", "tradutor" (2,5 GB) ou "completo" (uns 28 GB).
+    falta: String,
+    livre_gb: u64,
+    memoria_gb: u64,
+    pasta_app: String,
 }
 
 #[derive(Default)]
@@ -62,6 +69,8 @@ struct Estado {
     tradutor: Mutex<Option<Tradutor>>,
     cancelar: Arc<AtomicBool>,
     saindo: AtomicBool,
+    instalando: AtomicBool,
+    vigia: AtomicBool,
 }
 
 fn publicar(app: &AppHandle) {
@@ -141,35 +150,54 @@ fn ligar_tradutor_agora(app: &AppHandle) {
     }
 }
 
+/// Espaço livre (GB) no disco de uma pasta e memória do Mac (GB).
+fn disco_e_memoria(pasta: &Path) -> (u64, u64) {
+    let saida = |c: &str, a: &[&str]| {
+        std::process::Command::new(c).args(a).output().ok().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default()
+    };
+    let df = saida("/bin/df", &["-g", &pasta.display().to_string()]);
+    let livre = df.lines().nth(1).and_then(|l| l.split_whitespace().nth(3)).and_then(|v| v.parse().ok()).unwrap_or(0);
+    let mem = saida("/usr/sbin/sysctl", &["-n", "hw.memsize"]).trim().parse::<u64>().unwrap_or(0) / (1 << 30);
+    (livre, mem)
+}
+
 /// Ao abrir o app: configuração, motor e tradutor (em paralelo), e um vigia que percebe se o motor fechou.
 fn preparar(app: AppHandle) {
-    match local::carregar() {
-        Ok(c) => {
-            let faltando = local::modelos_faltando(&c);
-            mudar(&app, |e| {
-                e.faltando = faltando;
-                e.saida = c.saida.display().to_string();
-                e.entrada = c.entrada.display().to_string();
-                e.modelos = c.modelos_dir.display().to_string();
-                e.comfy_dir = c.comfy_dir.display().to_string();
-                e.log = local::pasta_app().join("comfyui.log").display().to_string();
-                e.seg_passo = c.seg_passo.clone();
-                e.favoritas = c.favoritas.clone();
-            });
-            *app.state::<Estado>().config.lock().unwrap() = Some(c);
-        }
-        Err(err) => {
-            mudar(&app, |e| {
-                e.motor = Situacao::Ausente;
-                e.motor_msg = format!("{err:#}");
-                e.tradutor = Situacao::Ausente;
-            });
-            return;
-        }
+    let (c, falta) = local::preparar();
+    let pasta = local::pasta_app();
+    if let Some(c) = &c {
+        let faltando = local::modelos_faltando(c);
+        mudar(&app, |e| {
+            e.faltando = faltando;
+            e.saida = c.saida.display().to_string();
+            e.entrada = c.entrada.display().to_string();
+            e.modelos = c.modelos_dir.display().to_string();
+            e.comfy_dir = c.comfy_dir.display().to_string();
+            e.log = pasta.join("comfyui.log").display().to_string();
+            e.seg_passo = c.seg_passo.clone();
+            e.favoritas = c.favoritas.clone();
+        });
+        *app.state::<Estado>().config.lock().unwrap() = Some(c.clone());
     }
+    if falta != local::Falta::Nada {
+        let (livre, mem) = disco_e_memoria(&pasta);
+        mudar(&app, |e| {
+            e.falta = if falta == local::Falta::Tradutor { "tradutor" } else { "completo" }.into();
+            e.motor = Situacao::Instalar;
+            e.tradutor = Situacao::Instalar;
+            e.livre_gb = livre;
+            e.memoria_gb = mem;
+            e.pasta_app = pasta.display().to_string();
+        });
+        return; // a interface mostra a tela de instalação; o comando `instalar` chama `preparar` de novo no fim
+    }
+    mudar(&app, |e| e.falta = "nada".into());
     let a2 = app.clone();
     std::thread::spawn(move || ligar_tradutor_agora(&a2));
     ligar_motor_agora(&app);
+    if app.state::<Estado>().vigia.swap(true, Ordering::Relaxed) {
+        return; // já tem um vigia rodando
+    }
 
     // vigia: se o ComfyUI fechar (por exemplo, o Desktop), religa o do Revela
     loop {
@@ -189,6 +217,50 @@ fn preparar(app: AppHandle) {
             ligar_motor_agora(&app);
         }
     }
+}
+
+/// Roda o instalador (recursos/instalador/instalar.sh) e manda cada linha para a interface (evento "instalacao").
+/// No fim, prepara o app de novo (motor e tradutor).
+#[tauri::command]
+fn instalar(app: AppHandle) -> Result<(), String> {
+    use std::io::{BufRead, BufReader};
+    let st = app.state::<Estado>();
+    if st.instalando.swap(true, Ordering::Relaxed) {
+        return Ok(());
+    }
+    let modo = st.app.lock().unwrap().falta.clone();
+    let rec = app.path().resource_dir().map_err(|e| e.to_string())?.join("instalador");
+    let filho = std::process::Command::new("/bin/zsh")
+        .arg(rec.join("instalar.sh"))
+        .arg(&rec)
+        .arg(local::pasta_app())
+        .arg(if modo == "tradutor" { "tradutor" } else { "completo" })
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+    let mut filho = match filho {
+        Ok(f) => f,
+        Err(e) => {
+            st.instalando.store(false, Ordering::Relaxed);
+            return Err(format!("não consegui abrir o instalador: {e}"));
+        }
+    };
+    let saida = filho.stdout.take().unwrap();
+    std::thread::spawn(move || {
+        let mut ok = false;
+        for linha in BufReader::new(saida).lines().map_while(Result::ok) {
+            ok |= linha.trim() == "PRONTO";
+            let _ = app.emit("instalacao", linha);
+        }
+        let _ = filho.wait();
+        app.state::<Estado>().instalando.store(false, Ordering::Relaxed);
+        if ok {
+            preparar(app);
+        } else {
+            let _ = app.emit("instalacao", "FIM_SEM_SUCESSO");
+        }
+    });
+    Ok(())
 }
 
 #[tauri::command]
@@ -416,7 +488,7 @@ fn colar(app: AppHandle, request: tauri::ipc::Request<'_>) -> Result<String, Str
 async fn para_avid(app: AppHandle, caminho: String, preencher: bool) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let c = config(&app)?;
-        motor::imagem::para_avid(Path::new(&caminho), &c.saida.join("Para o Avid"), preencher)
+        motor::imagem::para_avid(Path::new(&caminho), &c.saida.join(galeria::PASTA_AVID), preencher)
             .map(|p| p.display().to_string())
             .map_err(|e| format!("{e:#}"))
     })
@@ -474,7 +546,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            estado, ligar_motor, traduzir, gerar, cancelar, galeria, favoritar, dimensoes, colar, para_avid, mostrar, autoteste,
+            estado, ligar_motor, traduzir, gerar, cancelar, galeria, favoritar, dimensoes, colar, para_avid, mostrar, instalar, autoteste,
             registrar, sair
         ])
         .build(tauri::generate_context!())
