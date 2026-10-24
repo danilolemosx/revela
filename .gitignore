@@ -1,0 +1,7 @@
+/target
+/app/gen/
+/app/binaries/
+node_modules/
+.DS_Store
+/testes-ui/sim/
+/testes-ui/capturas/

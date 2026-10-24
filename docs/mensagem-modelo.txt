@@ -1,0 +1,7 @@
+Fala, pessoal! 🎧
+
+Fiz um app gratuito pra [o que faz], o *NOME*. Roda no computador, [1 vantagem prática]. Tem pra Mac e Windows.
+
+👉 [LINK]
+
+Na primeira vez que abrir, o computador vai reclamar, é normal. Tem um LEIA-ME na pasta explicando como liberar. Se testarem, me contem! 😄

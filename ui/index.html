@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Revela</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="logo">REVE<b>L</b>A</div>
+  <div class="sub">IMAGENS COM IA<br>TUDO NO SEU MAC</div>
+  <nav class="modos">
+    <button id="mCriar" class="on">CRIAR DO ZERO<small>só com o texto</small></button>
+    <button id="mEditar">EDITAR FOTO<small>1 ou 2 referências</small></button>
+  </nav>
+  <div class="direita">
+    <div class="selo cadeado" title="O Revela só conversa com o próprio Mac (127.0.0.1). O ComfyUI roda em modo offline.">OFFLINE · NADA SAI DO MAC</div>
+    <button class="selo" id="selo"><i></i><span id="seloTxt">PROCURANDO O MOTOR…</span></button>
+    <button class="engr" id="engr" title="Ajustes e pastas">⚙</button>
+  </div>
+</header>
+
+<main>
+  <!-- ESQUERDA: o pedido -->
+  <section class="cartao painel">
+    <div class="bloco so-editar oculto" id="blocoFotos">
+      <div class="cab"><span class="n">1</span><span class="rot">Fotos de referência</span><span class="dica">arraste, clique ou ⌘V</span></div>
+      <div class="refs">
+        <div class="ref vazia" data-slot="0"></div>
+        <div class="ref vazia" data-slot="1"></div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="cab"><span class="n" data-n="pedido">1</span><span class="rot">O que você quer · em português</span></div>
+      <textarea class="pt" id="pt" spellcheck="true" placeholder="Ex.: um senhor de chapéu de palha vendendo pamonha numa Kombi velha, rua de terra, fim de tarde"></textarea>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="bloco">
+      <div class="cab"><span class="rot">Em inglês · vai para a IA</span><span class="dica" id="tradDica">tradutor local</span></div>
+      <div class="ingles" id="ingles">
+        <textarea id="en" readonly placeholder="A tradução aparece aqui."></textarea>
+        <div class="termos" id="termos"></div>
+        <div class="barra">
+          <div class="seg" id="segTrad"><span data-m="traduzir" class="on">SÓ TRADUZIR</span><span data-m="detalhar">DETALHAR</span></div>
+          <button class="mini" id="btEditarEn" title="Editar o inglês à mão">✎</button>
+          <button class="mini" id="btRetraduzir" title="Traduzir de novo">↻</button>
+          <span class="aprov" id="aprov"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="cab"><span class="n" data-n="tam">2</span><span class="rot">Tamanho</span>
+        <button class="tecla mini-t" id="rascunho" title="Metade da largura e da altura: bem mais rápido, para testar a ideia"><span class="led"></span>RASCUNHO RÁPIDO · ½ TAMANHO</button>
+      </div>
+      <div class="tamanhos" id="tamanhos">
+        <button class="tam" data-t="169"><span class="fig" style="width:28px;height:16px"></span><b>16:9</b><small>1344×768</small></button>
+        <button class="tam" data-t="916"><span class="fig" style="width:10px;height:18px"></span><b>9:16</b><small>768×1344</small></button>
+        <button class="tam" data-t="11"><span class="fig" style="width:17px;height:17px"></span><b>1:1</b><small>1024×1024</small></button>
+        <button class="tam" data-t="239"><span class="fig" style="width:30px;height:12.5px"></span><b>2.39</b><small>1536×640</small></button>
+        <button class="tam" data-t="foto"><span class="fig" style="width:17px;height:17px;border-style:dashed"></span><b>FOTO</b><small id="tamFoto">igual à foto 1</small></button>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="cab"><span class="n" data-n="qual">3</span><span class="rot">Qualidade</span></div>
+      <div class="qualid">
+        <button class="q" data-q="rapida"><b>RÁPIDA</b><small id="estRapida">4 passos</small></button>
+        <button class="q" data-q="caprichada"><b>CAPRICHADA</b><small id="estCaprichada">20 passos</small></button>
+      </div>
+    </div>
+
+    <div class="rodape">
+      <div class="seed">
+        <span class="rot">Seed</span><span class="num" id="seed" title="Clique para digitar um seed"></span>
+        <div class="acoes"><button id="sSortear" title="Um seed novo a cada imagem">🎲 SORTEAR</button><button id="sFixar" title="Manter este seed">🔒 FIXAR</button></div>
+      </div>
+      <div class="botoes">
+        <button class="gerar" id="gerar">GERAR<small>⌘ + Enter</small></button>
+        <button class="fila" id="btFila">+ FILA<small>gera depois</small></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENTRO: o resultado -->
+  <section class="centro">
+    <div class="visor" id="visor">
+      <div class="canto" id="canto"></div>
+      <div class="canto2" id="canto2"></div>
+      <div class="vazio-visor" id="vazioVisor">
+        <b>NADA AINDA</b>
+        <span>Escreva o pedido à esquerda e clique em GERAR.<br>Os resultados ficam na pasta output e aparecem à direita.</span>
+      </div>
+      <img id="imgVisor" class="oculto" alt="">
+      <div class="etapas-visor oculto" id="etapas"></div>
+      <button class="antes oculto" id="btAntes" title="Segure para ver a foto 1 (antes)">⇆ ANTES</button>
+      <div class="progresso oculto" id="progresso">
+        <div class="l1">
+          <div class="tempo" id="pTempo">0:00</div>
+          <div class="txt"><b id="pEtapa">PREPARANDO</b><br><span id="pSub"></span></div>
+          <button class="cancelar" id="btCancelar">✕ CANCELAR</button>
+        </div>
+        <div class="trilho"><i id="pBarra"></i><span class="marcas" id="pMarcas"></span></div>
+      </div>
+    </div>
+
+    <div class="info" id="info">
+      <div class="dados" id="dados"></div>
+      <div class="acoes2" id="acoes">
+        <button class="ac forte" id="btVariar" title="Mesmo pedido, outro seed">↻ REPETIR COM VARIAÇÃO</button>
+        <button class="ac" id="btUsar" title="Usar este resultado como foto 1 (editar em etapas)">✎ USAR COMO REFERÊNCIA</button>
+        <button class="ac" id="btCarregar" title="Carregar o pedido, o tamanho e o seed desta imagem (para refazer igual)">⤓</button>
+        <button class="ac" id="btFav" title="Favorita">★</button>
+        <div class="dir avid">
+          <button class="ac verm" id="btAvid" title="Cópia 1920×1080 em PNG na pasta output/Para o Avid">▣ PARA O AVID</button>
+          <div class="menu oculto" id="menuAvid">
+            <button data-p="1"><b>PREENCHER</b><small>corta as sobras, sem tarja</small></button>
+            <button data-p="0"><b>ENCAIXAR</b><small>imagem inteira, com tarja preta</small></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIREITA: galeria da pasta output -->
+  <aside class="galeria">
+    <div class="cab"><span class="rot">Resultados</span><button class="dica" id="abrirOutput" title="Abrir a pasta output">pasta output · <span id="nGal">0</span></button></div>
+    <div class="filtro" id="filtro"><button data-f="todos" class="on">TODOS</button><button data-f="fav">★ FAVORITAS</button><button data-f="hoje">HOJE</button></div>
+    <div class="fila-lista oculto" id="filaLista"></div>
+    <div class="grade" id="grade"></div>
+  </aside>
+</main>
+
+<!-- ajustes -->
+<div class="fundo-modal oculto" id="modal">
+  <div class="modal">
+    <div class="cab"><span class="rot">Ajustes</span><button class="fechar" id="fecharModal">✕</button></div>
+    <div class="linhas" id="ajustes"></div>
+    <p class="creditos">Motor: <b>ComfyUI</b> (GPL-3.0) · Modelos: <b>FLUX.2 [klein] 4B</b>, Black Forest Labs (Apache 2.0) ·
+      Tradutor: <b>Qwen3 4B Instruct</b> (Apache 2.0) no <b>llama.cpp</b> (MIT). Tudo roda neste Mac.</p>
+  </div>
+</div>
+
+<div class="aviso oculto" id="aviso"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

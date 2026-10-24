@@ -1,0 +1,53 @@
+NOME-DO-APP X.Y.Z — descrição em uma linha
+==========================================
+
+O QUE É
+[2 ou 3 frases simples: o que o app faz, para quem, e que roda no computador sem internet.]
+
+
+COMO USAR
+1. [passo]
+2. [passo]
+3. [passo]
+
+
+QUAL ARQUIVO BAIXAR
+- Mac com chip Apple (M1, M2, M3, M4): NOME_X.Y.Z_aarch64.dmg
+- Mac com processador Intel:          NOME_X.Y.Z_x64.dmg
+- Windows 10/11:                      NOME_X.Y.Z_x64-setup.exe
+
+Não sabe qual é o seu Mac? Menu Apple () > Sobre Este Mac.
+"Chip Apple M..." = aarch64. "Processador Intel" = x64.
+
+
+INSTALAR NO MAC
+Abra o .dmg e arraste o app para a pasta Aplicativos.
+O app não é assinado pela Apple, então o Mac reclama na primeira vez. É normal:
+
+> "O NOME não pode ser aberto" / "Apple não pôde verificar…"
+  1. Tente abrir o app uma vez e clique em OK.
+  2. Vá em Ajustes do Sistema > Privacidade e Segurança.
+  3. No fim da página, clique em "Abrir Mesmo Assim" e confirme com a senha.
+
+> "O NOME está danificado e não pode ser aberto"
+  Não está danificado: é o bloqueio do macOS para arquivos baixados.
+  1. Copie o app para Aplicativos.
+  2. Abra o Terminal (Aplicativos > Utilitários > Terminal), cole e aperte Enter:
+       xattr -cr /Applications/NOME.app
+  3. Abra o app de novo.
+
+> O app não abre ou fecha sozinho
+  Confira se baixou o .dmg certo (aarch64 para chip Apple, x64 para Intel).
+
+
+INSTALAR NO WINDOWS
+> "O Windows protegeu o computador" (SmartScreen)
+  Clique em "Mais informações" e depois em "Executar assim mesmo".
+
+> O navegador bloqueia o download
+  Nos downloads, clique nos três pontinhos ao lado do arquivo e escolha "Manter".
+
+
+BAIXANDO DO GOOGLE DRIVE
+"O Google Drive não pode verificar este arquivo quanto a vírus": é só pelo tamanho.
+Clique em "Fazer o download assim mesmo".

@@ -1,0 +1,65 @@
+name: Release
+
+# Dispara ao publicar uma Release (com tag v*) pelo site do GitHub;
+# os instaladores são anexados a essa Release.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  instaladores:
+    name: Instalador ${{ matrix.nome }}
+    if: github.event_name != 'release' || startsWith(github.event.release.tag_name, 'v')
+    strategy:
+      # cada plataforma é independente: se uma falhar, as outras publicam
+      fail-fast: false
+      matrix:
+        include:
+          # só Mac com chip Apple: o ComfyUI usa o MPS (a GPU do chip M)
+          - nome: macOS Apple Silicon
+            os: macos-latest
+            args: --target aarch64-apple-darwin
+            alvo: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.alvo }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.alvo }}
+      # Se o app precisar de um programa externo embutido (como o bmx no Decanta), compile-o aqui
+      # para app/binaries/<nome>-<alvo> e declare "externalBin" no tauri.conf.json.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app
+          tauriScript: tauri
+          args: ${{ matrix.args }}
+          tagName: ${{ github.event.release.tag_name }}
+          releaseName: "Revela ${{ github.event.release.tag_name }}"
+          releaseDraft: false
+          prerelease: false
+      - name: Guardar instaladores como artefato (execução manual)
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: instaladores-${{ matrix.os }}-${{ matrix.alvo }}
+          path: |
+            target/*/release/bundle/dmg/*.dmg
+            target/release/bundle/msi/*.msi
+            target/release/bundle/nsis/*.exe

@@ -1,0 +1,137 @@
+{
+  "amostrador": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "euler"
+    }
+  },
+  "gerar": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "guider": [
+        "guia",
+        0
+      ],
+      "latent_image": [
+        "latente",
+        0
+      ],
+      "noise": [
+        "ruido",
+        0
+      ],
+      "sampler": [
+        "amostrador",
+        0
+      ],
+      "sigmas": [
+        "passos",
+        0
+      ]
+    }
+  },
+  "guia": {
+    "class_type": "CFGGuider",
+    "inputs": {
+      "cfg": 5.0,
+      "model": [
+        "unet",
+        0
+      ],
+      "negative": [
+        "negativo",
+        0
+      ],
+      "positive": [
+        "positivo",
+        0
+      ]
+    }
+  },
+  "latente": {
+    "class_type": "EmptyFlux2LatentImage",
+    "inputs": {
+      "batch_size": 1,
+      "height": 1024,
+      "width": 1024
+    }
+  },
+  "negativo": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "texto",
+        0
+      ],
+      "text": ""
+    }
+  },
+  "passos": {
+    "class_type": "Flux2Scheduler",
+    "inputs": {
+      "height": 1024,
+      "steps": 20,
+      "width": 1024
+    }
+  },
+  "positivo": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "texto",
+        0
+      ],
+      "text": "PROMPT"
+    }
+  },
+  "revelar": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "gerar",
+        0
+      ],
+      "vae": [
+        "vae",
+        0
+      ]
+    }
+  },
+  "ruido": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 0
+    }
+  },
+  "salvar": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "Revela/REVELA",
+      "images": [
+        "revelar",
+        0
+      ]
+    }
+  },
+  "texto": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "device": "default",
+      "type": "flux2"
+    }
+  },
+  "unet": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "flux-2-klein-base-4b.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "vae": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    }
+  }
+}
